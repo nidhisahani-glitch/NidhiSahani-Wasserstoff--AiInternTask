@@ -1,0 +1,162 @@
+DOCUMENTATION  OF  AI PERSONAL EMAIL ASSISTANT
+
+============================================================================================================================================================================================
+This documentation provide an overview of the automated email processing machine. 
+The task goals is  to automate the handling of incoming emails :
+>> Fetching new, unseen emails from a described Gmail inbox.
+>> Storing primary e-mail data in a neighborhood SQLite database.
+>> analyzing the e-mail content to take movements.
+>> generating  replies using a pre-skilled language version (GPT-2) from hugging face.
+>> Integrating with external equipment like Google Calendar (for meeting scheduling), Google custom search (for statistics retrieval), and Slack (for pressing notifications).
+>> imparting the user with an option to view and edit the generated respond earlier than sending.
+>> Sending the very last respond to the email sender.
+
+============================================================================================================================================================================================
+
+1.   Steps and decisions:
+
+1.1. Set up of Dependencies:
+>> transformers: For using the GPT-2 pre-educated language model from Hugging Face.
+>> google-auth, google-auth-oauthlib: For dealing with OAuth 2.0 authentication with Google APIs ( uses a service account for Calendar and app password for Gmail).
+>> google-api-python-purchaser: For interacting with Google services like Gmail and Calendar.
+>> requests: For making HTTP requests
+>> imapclient: For get entry to and control emails using the IMAP protocol.
+>> slack_sdk: For interacting with the Slack API to ship messages.
+
+1.2. API Key and email Configuration:
+
+>> Assumptions: The user has a Gmail account and has both enabled "much less at ease app access" or generated an App Password (endorsed for safety if 2-Step Verification is enabled).                    The person has obtained essential API keys for Google custom seek and a Slack Bot token. A credentials.json report for the Google service Account is present.
+>> Design: 
+1. EMAIL_ACCOUNT, EMAIL_PASSWORD: Credentials for accessing the Gmail inbox.
+2. IMAP_SERVER, SMTP_SERVER, SMTP_PORT:  Connecting to Gmail's IMAP and SMTP servers.
+3. SCOPES, SERVICE_ACCOUNT_FILE: Configuration for Google Calendar API get entry to the use of a service account.
+4. calender_service: Initialized Google Calendar API client.
+5. SLACK_BOT_TOKEN: Token for authenticating with the Slack API.
+6. slack_client: Initialized Slack WebClient.
+7. DB_FILE: call of the SQLite database document.
+8. Hugging Face login(): Used to get right of entry to a personal GPT-2 model.
+9. reply_generator: Initialized GPT-2 pipeline for text generation.
+
+1.3. SQLite Database Setup:
+
+>> Design: the use of a local SQLite database  to save fetched email metadata.
+>> Assumptions: The script has write permissions to the nearby record system.
+>> table Schema: The emails desk stores identification, sender, recipient, challenge, timestamp, body, and thread_id.
+
+1.4. Fetching Emails (fetch_emails):
+
+>> Decision: trying to find "UNSEEN" emails guarantees that only new emails are processed. Fetching a confined quantity of emails ([:5]) in each run prevents the device if there are a      huge variety of unread emails.
+>> Assumptions: The provided email credentials are correct. The IMAP server address is accurate.
+>> Process: 
+1. Connects to the IMAP server the use of SSL.
+2. Logs in to the email account.
+3. Selects the "inbox".
+4. Searches for emails with the "UNSEEN" flag.
+5. Iterates thru the IDs of the unseen emails (up to 5).
+6. Fetches the overall e-mail content (RFC822 layout).
+7. Parses the e-mail headers (sender, recipient, problem, timestamp).
+8. Decodes the issue, handling different encodings.
+9. Extracts the email body, handling both plain textual content and multipart emails, and distinctive character encodings.
+10. Extracts the "Message-id" as a capacity thread_id.
+11. Appends the extracted statistics to a listing of emails.
+12. Marks the processed emails as "seen".
+13. Logs out from the IMAP server.
+
+1.5. AI-based totally auto-reply (generate_reply):
+
+>> Design: A powerful language model like GPT-2 allows for the era of  replies.
+>> Assumptions: The transformers library and the gpt2 version are effectively hooked up. the cuddling Face login became successful if a personal model is used.
+>> Method: 
+1. Create a prompt  "reply to this e mail:" to the e-mail frame.
+2. hundreds the gpt2 tokenizer to convert the set off into tokens that the model can recognize.
+3.Tokenizes the input e mail frame, truncating it if it exceeds the version's maximum input duration. An attention_mask is created to signify which tokens the version need to attend  to generates a reply the usage of the version's generate method, specifying the maximum quantity of new tokens to generate and the padding token.
+4. Decodes the generated tokens again into human-readable text, skipping unique tokens.
+
+1.6. Google custom internet search (web_search):
+
+>> Decision: an internet seek lets in the system to provide more informative replies, specially whilst the e-mail asks for studies or records.
+>> Assumptions: The consumer has a Google Cloud venture with the custom search API enabled and has acquired an API key and seek Engine identification.
+>> Technique: 
+1. Create the API request URL with the furnished API key, seek engine identity, and query.
+2. Sends an HTTP GET request to the Google custom search API.
+3. Parses the JSON response.
+4. Extracts the "snippet" from the primary search result if available.
+5. Returns the snippet or a "No relevant information located" message if no consequences are again.
+
+1.7. Slack Integration (send_slack_message):
+
+>> Decision: Slack notify the user about urgent emails or other vital occasions.
+>> Assumptions: A  Slack bot with the vital permissions (chat:write) were created, and the SLACK_BOT_TOKEN is valid. the specified channel identification exists.
+>> Process: 
+1. makes use of the slack_client to call the chat_postMessage approach.
+2. Fill the goal channel_ID and the text of the message.
+3. consists of blunders dealing with to trap SlackApiError exceptions and print any errors occurring at the same time as sending the message.
+
+1.8. Time table assembly (schedule_meeting):
+
+>> Choice: Automating meeting scheduling can  reply to assembly requests. using the Google Calendar API permits for direct integration with the person's calendar.
+>> Assumptions: A Google Cloud task with the Google Calendar API enabled and configured for the provided provider account (credentials.json) is installation. The carrier account has the essential scopes (https://www.googleapis.com/auth/calender).
+>> System: 
+1. Defines the event details, together with precis, start and quit times and timezone.
+2. Executes the API request and retrieves the created occasion details.
+3. Returns the htmlLink to the newly created Google Calendar event.
+
+1.9. Respond (send_email_reply):
+
+>> Design: the use of SMTP allows the script to ship emails.
+>> Assumptions: The supplied email credentials are accurate. The SMTP server address and port are correct. "less comfortable app get admission to" is enabled or an App Password is used.
+>> System: 
+1. Connects to the SMTP server the usage of SSL/TLS.
+2. Logs in to the email account.
+3. take a look at the e-mail message with "From", "To", "concern" (prefixed with "Re: "), and the e-mail frame, encoding it in UTF-8.
+4. Sends the email the use of server.sendmail().
+5. Closes the relationship.
+
+1.10. Automate electronic mail Processing (process_emails) :
+
+>> Decisions: This function brings together all of the additives to create the automated system. It offer consumer interplay for reviewing and confirming replies.
+>> Assumptions: all of the man or woman capabilities (fetch_emails, generate_reply, web_search, schedule_meeting, send_slack_message, send_email_reply) are working successfully.
+>> System: 
+1. Calls fetch_emails() to get new emails.
+2. Prints the email details (sender, recipient, problem, timestamp).
+3. checks if the email frame (in lowercase) consists of "assembly". in that case, calls schedule_meeting() and create a respond with the meeting link.
+4. otherwise, calls generate_reply() to generate an AI-primarily based respond.
+5. assessments if the e-mail frame (in lowercase) includes "studies". in that case, calls web_search() with the e-mail frame as the question and appends the search end result to the reply.
+6. Prints the generated AI respond.
+7. prompts the person if they need to edit the reply using the multiline_input() characteristic.
+8. Prints the final reply to be despatched.
+9. tests if the email concern (in lowercase) consists of "urgent". in that case, calls send_slack_message() to notify the user on Slack.
+10. prompts the person for affirmation earlier than sending the reply.
+11. If confirmed, calls send_email_reply() to send the respond.
+12. Prints a confirmation message indicating whether the email became despatched.
+
+============================================================================================================================================================================================
+
+2. Challenges and Solutions: 
+
+>> First of all, using preferred password-based authentication with Gmail may fail if "less comfortable app get right of entry to" is turned off (that's the default for safety reasons).The documentation explicitly mentions using an App Password generated within the Gmail account settings if 2-Step Verification is enabled. For Google Calendar get entry to, a service Account with right OAuth 2.0 scopes is used, that's a more secure method for server-to-server communique.
+
+>> The  output from GPT-2 can be too long, or no longer without delay appropriate as a reply. The spark off  generate a respond. The max_new_tokens parameter inside the model.generate() technique limits the duration of the generated text. The person is also given the option to edit the generated reply earlier than sending. 
+>> Common calls to the Google custom search API or Google Calendar API would possibly exceed rate limits, leading to temporary blockading. The present day implementation methods a constrained wide variety of emails in every run, which reduces the frequency of API calls. 
+
+>> Electronic mail content material can be encoded in various formats (e.g., UTF-eight, Latin-1). wrong interpreting can result in garbled textual content. The fetch_emails() function consists of try-except blocks to attempt interpreting the e-mail body with UTF-eight first and then falling again to Latin-1 if UTF-8 fails, with error substitute to deal with undecodable characters. The issue is also decoded primarily based on its encoding.
+============================================================================================================================================================================================
+
+3. Assumptions:
+
+>> The consumer has the important bills and API credentials for Gmail, Google Cloud (for Calendar and custom seek), and Slack.
+>> The desired Python libraries are set up successfully.
+>> The community connection is stable for gaining access to e-mail servers and APIs.
+
+============================================================================================================================================================================================
+
+4. Use of AI Coding Assistants:
+
+>> If we  use a device “gpt2" , the mixing and system would possibly look barely one of a kind as compared to immediately the usage of the transformers library as proven within the authentic code. It  provides a higher-degree abstraction over the raw GPT-2 model, simplifying the procedure of generating text. it might have a selected expected input layout and a described output layout. as opposed to importing AutoTokenizer and AutoModelForCausalLM from transformers. The generate_reply function would be  shorter and easier to examine. The center logic of fetching emails, interacting with different APIs (Google, Slack), and the overall  in process_emails might continue to be identical. the principle trade might be inside the AI reply generation. The transformers library from Hugging Face is the standard and is a  manner to interact with pre-skilled fashions like GPT-2 in Python. therefore, the authentic code immediately the use of transformers is the sensible technique.
+
+>> As a large language model, I don't at once use coding assistants like Cursor or GitHub Copilot . it'd have supplied wise guidelines for code finishing touch as the developer typed, lowering the quantity of manual typing required. this is evident within the fetch_emails, generate_reply, and send_slack_message examples. For repetitive tasks like putting in the tokenizer and model in generate_reply or imposing primary errors managing in send_slack_message, the AI may want to have generated the vital boilerplate code, saving the developer effort and time. Handling multipart emails and different person encodings in fetch_emails. For libraries like transformers and slack_sdk, the AI ought to have supplied applicable code snippets and feature calls, making it less complicated for the developer to utilize these libraries.
+
+>> By means of supplying real-time code pointers, finishing code snippets, and suggesting common patterns, an AI coding assistant helped the developer write code for the automatic e-mail processing device.
+
+============================================================================================================================================================================================                                                              
+                                                                                           Thank You!!
