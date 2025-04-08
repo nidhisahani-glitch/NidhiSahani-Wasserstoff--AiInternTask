@@ -1,0 +1,8 @@
+transformers
+google-auth
+google-auth-oauthlib
+google-api-python-client
+requests
+imapclient
+slack_sdk
+huggingface_hub
