@@ -38,7 +38,7 @@ Slack API – For messages and bot replies.
 3. Set up API Credentials - SLACK_BOT_TOKEN ="your-slack-token"
                             SLACK_CHANNEL = "your-channel-id"
 
-#### Running Steps : Run CODE_FILE.ipynb
+#### Running Steps : Run CODE_FILE.ipynb and see the output in the terminal.
 
-#### My Github Repository :  
+#### My Github Repository :   https://github.com/nidhisahani-glitch/NidhiSahani-Wasserstoff--AiInternTask.git
 
